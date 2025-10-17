@@ -11,19 +11,39 @@ $(function () {
 	var offsetY = $loveHeart.height() / 2 - 55;
     $garden = $("#garden");
     gardenCanvas = $garden[0];
-	gardenCanvas.width = $("#loveHeart").width();
-    gardenCanvas.height = $("#loveHeart").height()
+	var cssW = $("#loveHeart").width();
+	var cssH = $("#loveHeart").height();
+	gardenCanvas.style.width = cssW + "px";
+	gardenCanvas.style.height = cssH + "px";
     gardenCtx = gardenCanvas.getContext("2d");
+    // HiDPI scaling for crisper strokes
+    (function(){
+    	var dpr = window.devicePixelRatio || 1;
+    	gardenCanvas.width = Math.round(cssW * dpr);
+    	gardenCanvas.height = Math.round(cssH * dpr);
+    	gardenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    })();
     gardenCtx.globalCompositeOperation = "lighter";
+    gardenCtx.lineWidth = 0.8;
+    gardenCtx.lineCap = "round";
     garden = new Garden(gardenCtx, gardenCanvas);
 
 	// setup overlay for star above text
 	$overlay = $("#overlay");
 	overlayCanvas = $overlay[0];
-	overlayCanvas.width = $("#loveHeart").width();
-	overlayCanvas.height = $("#loveHeart").height();
+	overlayCanvas.style.width = cssW + "px";
+	overlayCanvas.style.height = cssH + "px";
 	overlayCtx = overlayCanvas.getContext("2d");
+    // HiDPI scaling for overlay
+    (function(){
+    	var dpr = window.devicePixelRatio || 1;
+    	overlayCanvas.width = Math.round(cssW * dpr);
+    	overlayCanvas.height = Math.round(cssH * dpr);
+    	overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    })();
 	overlayCtx.globalCompositeOperation = "lighter";
+    overlayCtx.lineWidth = 0.8;
+    overlayCtx.lineCap = "round";
 	overlayGarden = new Garden(overlayCtx, overlayCanvas);
 	
 	$("#content").css("width", $loveHeart.width() + $("#code").width());
@@ -173,8 +193,8 @@ function getStarPoint(angle) {
 	// увеличить звезду
 	var OUTER_R = Math.round(BASE * 0.2);
 	var INNER_R = Math.round(OUTER_R * 0.35);
-	var STAR_SHIFT_X = -200;   // правее
-	var STAR_SHIFT_Y = 230;    // выше
+	var STAR_SHIFT_X = 100;   // правее
+	var STAR_SHIFT_Y = 245;    // выше
 
 	// --- ленивый кеш: вершины и длины считаем один раз ---
 	var ROTATE = STAR_ROTATE_DEG * Math.PI / 180;
