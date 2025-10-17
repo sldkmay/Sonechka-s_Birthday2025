@@ -1,25 +1,42 @@
 ﻿
 var $window = $(window), gardenCtx, gardenCanvas, $garden, garden;
 var overlayCtx, overlayCanvas, $overlay, overlayGarden;
-var clientWidth = $(window).width();
-var clientHeight = $(window).height();
+var $loveHeart, $content;
+var offsetX, offsetY;
+
+function recomputeHeartCenter(){
+	offsetX = $loveHeart.width()/2;
+	offsetY = $loveHeart.height()/2 - 55;
+}
+
+// теперь оверлей равен контенту (накрывает и код, и сердце)
+function syncOverlayToContent(){
+    var dpr = window.devicePixelRatio || 1;
+    var w = $content.innerWidth();   // без margin
+    var h = $content.innerHeight();
+
+    // закрепляем к левому верхнему углу content
+    $("#overlay").css({ left:0, top:0, width:w+"px", height:h+"px" });
+
+    overlayCanvas.width  = Math.round(w * dpr);
+    overlayCanvas.height = Math.round(h * dpr);
+    overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
 
 $(function () {
     // setup garden
 	$loveHeart = $("#loveHeart");
-	var offsetX = $loveHeart.width() / 2;
-	var offsetY = $loveHeart.height() / 2 - 55;
-    $garden = $("#garden");
-    gardenCanvas = $garden[0];
+	$content   = $("#content");
+	$garden = $("#garden");
+	gardenCanvas = $garden[0];
 	var cssW = $("#loveHeart").width();
 	var cssH = $("#loveHeart").height();
 	gardenCanvas.style.width = cssW + "px";
 	gardenCanvas.style.height = cssH + "px";
     gardenCtx = gardenCanvas.getContext("2d");
-    // HiDPI scaling for crisper strokes
     (function(){
     	var dpr = window.devicePixelRatio || 1;
-    	gardenCanvas.width = Math.round(cssW * dpr);
+    	gardenCanvas.width  = Math.round(cssW * dpr);
     	gardenCanvas.height = Math.round(cssH * dpr);
     	gardenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     })();
@@ -28,34 +45,33 @@ $(function () {
     gardenCtx.lineCap = "round";
     garden = new Garden(gardenCtx, gardenCanvas);
 
-	// setup overlay for star above text
-	$overlay = $("#overlay");
-	overlayCanvas = $overlay[0];
-	overlayCanvas.style.width = cssW + "px";
-	overlayCanvas.style.height = cssH + "px";
-	overlayCtx = overlayCanvas.getContext("2d");
-    // HiDPI scaling for overlay
-    (function(){
-    	var dpr = window.devicePixelRatio || 1;
-    	overlayCanvas.width = Math.round(cssW * dpr);
-    	overlayCanvas.height = Math.round(cssH * dpr);
-    	overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    })();
-	overlayCtx.globalCompositeOperation = "lighter";
-    overlayCtx.lineWidth = 0.8;
-    overlayCtx.lineCap = "round";
-	overlayGarden = new Garden(overlayCtx, overlayCanvas);
-	
+
+	// 2) Проставляем размеры/позицию #content (как у тебя было)
 	$("#content").css("width", $loveHeart.width() + $("#code").width());
 	$("#content").css("height", Math.max($loveHeart.height(), $("#code").height()));
 	$("#content").css("margin-top", Math.max(($window.height() - $("#content").height()) / 2, 10));
 	$("#content").css("margin-left", Math.max(($window.width() - $("#content").width()) / 2, 10));
 
-    // renderLoop
+	// 3) Теперь и ТОЛЬКО теперь инициируем overlay и синхроним его к #content
+	$overlay = $("#overlay");
+	overlayCanvas = $overlay[0];
+	overlayCtx = overlayCanvas.getContext("2d");
+	overlayCtx.globalCompositeOperation = "lighter";
+    overlayCtx.lineWidth = 0.8;
+    overlayCtx.lineCap = "round";
+	overlayGarden = new Garden(overlayCtx, overlayCanvas);
+
+	recomputeHeartCenter();
+	syncOverlayToContent();
+
+    // 4) Рендер-петля
     setInterval(function () {
         garden.render();
         overlayGarden.render();
     }, Garden.options.growSpeed);
+
+	// 5) На случай изменений высоты из-за тайпрайтера — один тик позже пересинхроним
+	requestAnimationFrame(syncOverlayToContent);
 });
 
 // Heart click -> show GIF modal (delegated to support typewriter-dynamic content)
@@ -112,11 +128,25 @@ $(function () {
 })();
 
 $(window).resize(function() {
-    var newWidth = $(window).width();
-    var newHeight = $(window).height();
-    if (newWidth != clientWidth && newHeight != clientHeight) {
-        location.replace(location);
-    }
+	// пересчитать heart-canvas
+	var dpr = window.devicePixelRatio || 1;
+	var cssW = $loveHeart.width();
+	var cssH = $loveHeart.height();
+	gardenCanvas.style.width  = cssW + "px";
+	gardenCanvas.style.height = cssH + "px";
+	gardenCanvas.width  = Math.round(cssW * dpr);
+	gardenCanvas.height = Math.round(cssH * dpr);
+	gardenCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+	// пересчитать layout #content (как у тебя было)
+	$("#content").css("width", $loveHeart.width() + $("#code").width());
+	$("#content").css("height", Math.max($loveHeart.height(), $("#code").height()));
+	$("#content").css("margin-top", Math.max(($window.height() - $("#content").height()) / 2, 10));
+	$("#content").css("margin-left", Math.max(($window.width() - $("#content").width()) / 2, 10));
+
+	// пересчитать центр и overlay
+	recomputeHeartCenter();
+	syncOverlayToContent();
 });
 
 function getHeartPoint(angle) {
@@ -184,29 +214,32 @@ function showMessages() {
 	});
 }
 function getStarPoint(angle) {
-	// === Правильная звезда: равномерно по контуру ломаной ===
-	// --- настройки фигуры (подогнано под размер сердца) ---
 	var SPIKES = 5;
-	var STAR_ROTATE_DEG = 12; // угол поворота звезды (в градусах)
-	// Размер пропорционален канвасу, чтобы не искажалось (используем CSS-пиксели)
-	var cssW = overlayCanvas ? overlayCanvas.clientWidth : ($('#overlay').length ? $('#overlay').width() : 600);
-	var cssH = overlayCanvas ? overlayCanvas.clientHeight : ($('#overlay').length ? $('#overlay').height() : 600);
+	var STAR_ROTATE_DEG = 12;
+
+	// базовый размер и позиция берём из loveHeart
+	var cssW = $loveHeart.width();
+	var cssH = $loveHeart.height();
 	var BASE = Math.min(cssW, cssH) || 600;
-	// увеличить звезду
+
 	var OUTER_R = Math.round(BASE * 0.2);
 	var INNER_R = Math.round(OUTER_R * 0.35);
-	// Сдвиги относительно BASE (были 100 и 245 при BASE=600)
-	var STAR_SHIFT_X = Math.round(BASE * (100 / 600));   // правее
-	var STAR_SHIFT_Y = Math.round(BASE * (245 / 600));   // выше
+	var STAR_SHIFT_X = Math.round(BASE * (-300 / 600));
+	var STAR_SHIFT_Y = Math.round(BASE * (245 / 600));
 
-	// --- ленивый кеш: вершины и длины считаем один раз ---
+	// абсолютные координаты центра звезды относительно #content
+	var lhPos = $loveHeart.position();
+	var cx = lhPos.left + offsetX + STAR_SHIFT_X;
+	var cy = lhPos.top  + offsetY + STAR_SHIFT_Y;
+
 	var ROTATE = STAR_ROTATE_DEG * Math.PI / 180;
-	if (!getStarPoint._cache || getStarPoint._cache.rotate !== ROTATE || getStarPoint._cache.outerR !== OUTER_R || getStarPoint._cache.innerR !== INNER_R || getStarPoint._cache.shiftX !== STAR_SHIFT_X || getStarPoint._cache.shiftY !== STAR_SHIFT_Y) {
-		// центр звезды: от центра overlayCanvas в CSS-пикселях, с тем же вертикальным смещением, что у сердца
-		var cx = (overlayCanvas ? cssW / 2 : offsetX) + STAR_SHIFT_X;
-		var cy = (overlayCanvas ? (cssH / 2 - 55) : offsetY) + STAR_SHIFT_Y;
 
-		// набираем массив вершин по окружности, начиная сверху
+	if (!getStarPoint._cache ||
+	    getStarPoint._cache.rotate !== ROTATE ||
+	    getStarPoint._cache.outerR !== OUTER_R ||
+	    getStarPoint._cache.innerR !== INNER_R ||
+	    getStarPoint._cache.cx !== cx || getStarPoint._cache.cy !== cy) {
+
 		var verts = [];
 		var step = Math.PI / SPIKES;
 		var a = -Math.PI / 2 + ROTATE;
@@ -215,10 +248,8 @@ function getStarPoint(angle) {
 			verts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
 			a += step;
 		}
-		// замкнуть контур
 		verts.push({ x: verts[0].x, y: verts[0].y });
 
-		// посчитать длины сегментов и кумулятив
 		var segLen = [], cum = [0], total = 0;
 		for (var j = 0; j < verts.length - 1; j++) {
 			var dx = verts[j + 1].x - verts[j].x;
@@ -229,21 +260,19 @@ function getStarPoint(angle) {
 			cum.push(total);
 		}
 
-		getStarPoint._cache = { verts: verts, segLen: segLen, cum: cum, total: total, rotate: ROTATE, outerR: OUTER_R, innerR: INNER_R, shiftX: STAR_SHIFT_X, shiftY: STAR_SHIFT_Y };
+		getStarPoint._cache = { verts: verts, segLen: segLen, cum: cum, total: total, rotate: ROTATE,
+							outerR: OUTER_R, innerR: INNER_R, cx: cx, cy: cy };
 	}
 
 	var cache = getStarPoint._cache;
 	var verts = cache.verts, segLen = cache.segLen, cum = cache.cum, total = cache.total;
 
-	// angle (0..2π) -> доля пути вдоль контура
 	var t = (angle % (2 * Math.PI)) / (2 * Math.PI);
 	var target = t * total;
 
-	// найти сегмент, на котором лежит target
 	var i = 0;
 	while (i < segLen.length && cum[i + 1] < target) i++;
 
-	// интерполяция внутри сегмента
 	var segStart = cum[i], segDist = segLen[i];
 	var k = (segDist === 0) ? 0 : (target - segStart) / segDist;
 
