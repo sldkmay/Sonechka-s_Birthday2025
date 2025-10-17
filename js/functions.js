@@ -1,0 +1,289 @@
+﻿
+var $window = $(window), gardenCtx, gardenCanvas, $garden, garden;
+var overlayCtx, overlayCanvas, $overlay, overlayGarden;
+var clientWidth = $(window).width();
+var clientHeight = $(window).height();
+
+$(function () {
+    // setup garden
+	$loveHeart = $("#loveHeart");
+	var offsetX = $loveHeart.width() / 2;
+	var offsetY = $loveHeart.height() / 2 - 55;
+    $garden = $("#garden");
+    gardenCanvas = $garden[0];
+	gardenCanvas.width = $("#loveHeart").width();
+    gardenCanvas.height = $("#loveHeart").height()
+    gardenCtx = gardenCanvas.getContext("2d");
+    gardenCtx.globalCompositeOperation = "lighter";
+    garden = new Garden(gardenCtx, gardenCanvas);
+
+	// setup overlay for star above text
+	$overlay = $("#overlay");
+	overlayCanvas = $overlay[0];
+	overlayCanvas.width = $("#loveHeart").width();
+	overlayCanvas.height = $("#loveHeart").height();
+	overlayCtx = overlayCanvas.getContext("2d");
+	overlayCtx.globalCompositeOperation = "lighter";
+	overlayGarden = new Garden(overlayCtx, overlayCanvas);
+	
+	$("#content").css("width", $loveHeart.width() + $("#code").width());
+	$("#content").css("height", Math.max($loveHeart.height(), $("#code").height()));
+	$("#content").css("margin-top", Math.max(($window.height() - $("#content").height()) / 2, 10));
+	$("#content").css("margin-left", Math.max(($window.width() - $("#content").width()) / 2, 10));
+
+    // renderLoop
+    setInterval(function () {
+        garden.render();
+        overlayGarden.render();
+    }, Garden.options.growSpeed);
+});
+
+// Heart click -> show GIF modal (delegated to support typewriter-dynamic content)
+(function(){
+	function showModal() {
+		var modal = document.getElementById('gifModal');
+		if (!modal) return;
+		modal.classList.add('show');
+		modal.setAttribute('aria-hidden','false');
+		var audio = document.getElementById('meowAudio');
+		if (audio) {
+			try {
+				audio.pause();
+				audio.currentTime = 0;
+				audio.loop = true;
+				audio.volume = 1.0;
+				audio.play();
+			} catch (e) {}
+		}
+	}
+	function hideModal() {
+		var modal = document.getElementById('gifModal');
+		if (!modal) return;
+		modal.classList.remove('show');
+		modal.setAttribute('aria-hidden','true');
+		var audio = document.getElementById('meowAudio');
+		if (audio) {
+			try {
+				audio.pause();
+				audio.currentTime = 0;
+			} catch (e) {}
+		}
+	}
+	document.addEventListener('click', function(e){
+		var link = e.target && (e.target.id === 'heartLink' ? e.target : e.target.closest && e.target.closest('#heartLink'));
+		if (link) {
+			e.preventDefault();
+			showModal();
+			return;
+		}
+		var closeBtn = e.target && (e.target.id === 'gifClose' ? e.target : e.target.closest && e.target.closest('#gifClose'));
+		if (closeBtn) {
+			hideModal();
+			return;
+		}
+		var modal = document.getElementById('gifModal');
+		if (modal && e.target === modal) {
+			hideModal();
+		}
+	});
+	document.addEventListener('keydown', function(e){
+		if (e.key === 'Escape') hideModal();
+	});
+})();
+
+$(window).resize(function() {
+    var newWidth = $(window).width();
+    var newHeight = $(window).height();
+    if (newWidth != clientWidth && newHeight != clientHeight) {
+        location.replace(location);
+    }
+});
+
+function getHeartPoint(angle) {
+	var t = angle / Math.PI;
+	var x = 19.5 * (16 * Math.pow(Math.sin(t), 3));
+	var y = - 20 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+	return new Array(offsetX + x, offsetY + y);
+}
+
+function startHeartAnimation() {
+	var interval = 50;
+	var angle = 10;
+	var heart = new Array();
+	var animationTimer = setInterval(function () {
+		var bloom = getHeartPoint(angle);
+		var draw = true;
+		for (var i = 0; i < heart.length; i++) {
+			var p = heart[i];
+			var distance = Math.sqrt(Math.pow(p[0] - bloom[0], 2) + Math.pow(p[1] - bloom[1], 2));
+			if (distance < Garden.options.bloomRadius.max * 1.3) {
+				draw = false;
+				break;
+			}
+		}
+		if (draw) {
+			heart.push(bloom);
+			garden.createRandomBloom(bloom[0], bloom[1]);
+		}
+		if (angle >= 30) {
+			clearInterval(animationTimer);
+			showMessages();
+		} else {
+			angle += 0.2;
+		}
+	}, interval);
+}
+
+(function($) {
+	$.fn.typewriter = function() {
+		this.each(function() {
+			var $ele = $(this), str = $ele.html(), progress = 0;
+			$ele.html('');
+			var timer = setInterval(function() {
+				var current = str.substr(progress, 1);
+				if (current == '<') {
+					progress = str.indexOf('>', progress) + 1;
+				} else {
+					progress++;
+				}
+				$ele.html(str.substring(0, progress) + (progress & 1 ? '_' : ''));
+				if (progress >= str.length) {
+					clearInterval(timer);
+				}
+			}, 75);
+		});
+		return this;
+	};
+})(jQuery);
+
+
+function showMessages() {
+	adjustWordsPosition();
+	$('#messages').fadeIn(5000, function() {
+		showLoveU();
+	});
+}
+function getStarPoint(angle) {
+	// === Правильная звезда: равномерно по контуру ломаной ===
+	// --- настройки фигуры (подогнано под размер сердца) ---
+	var SPIKES = 5;
+	var STAR_ROTATE_DEG = 12; // угол поворота звезды (в градусах)
+	// Размер пропорционален канвасу, чтобы не искажалось
+	var BASE = overlayCanvas ? Math.min(overlayCanvas.width, overlayCanvas.height) : 600;
+	// увеличить звезду
+	var OUTER_R = Math.round(BASE * 0.2);
+	var INNER_R = Math.round(OUTER_R * 0.35);
+	var STAR_SHIFT_X = -200;   // правее
+	var STAR_SHIFT_Y = 230;    // выше
+
+	// --- ленивый кеш: вершины и длины считаем один раз ---
+	var ROTATE = STAR_ROTATE_DEG * Math.PI / 180;
+	if (!getStarPoint._cache || getStarPoint._cache.rotate !== ROTATE || getStarPoint._cache.outerR !== OUTER_R || getStarPoint._cache.innerR !== INNER_R || getStarPoint._cache.shiftX !== STAR_SHIFT_X || getStarPoint._cache.shiftY !== STAR_SHIFT_Y) {
+		// центр звезды: от центра overlayCanvas с тем же вертикальным смещением, что у сердца
+		var cx = (overlayCanvas ? overlayCanvas.width / 2 : offsetX) + STAR_SHIFT_X;
+		var cy = (overlayCanvas ? (overlayCanvas.height / 2 - 55) : offsetY) + STAR_SHIFT_Y;
+
+		// набираем массив вершин по окружности, начиная сверху
+		var verts = [];
+		var step = Math.PI / SPIKES;
+		var a = -Math.PI / 2 + ROTATE;
+		for (var i = 0; i < SPIKES * 2; i++) {
+			var r = (i % 2 === 0) ? OUTER_R : INNER_R;
+			verts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+			a += step;
+		}
+		// замкнуть контур
+		verts.push({ x: verts[0].x, y: verts[0].y });
+
+		// посчитать длины сегментов и кумулятив
+		var segLen = [], cum = [0], total = 0;
+		for (var j = 0; j < verts.length - 1; j++) {
+			var dx = verts[j + 1].x - verts[j].x;
+			var dy = verts[j + 1].y - verts[j].y;
+			var d = Math.hypot(dx, dy);
+			segLen.push(d);
+			total += d;
+			cum.push(total);
+		}
+
+		getStarPoint._cache = { verts: verts, segLen: segLen, cum: cum, total: total, rotate: ROTATE, outerR: OUTER_R, innerR: INNER_R, shiftX: STAR_SHIFT_X, shiftY: STAR_SHIFT_Y };
+	}
+
+	var cache = getStarPoint._cache;
+	var verts = cache.verts, segLen = cache.segLen, cum = cache.cum, total = cache.total;
+
+	// angle (0..2π) -> доля пути вдоль контура
+	var t = (angle % (2 * Math.PI)) / (2 * Math.PI);
+	var target = t * total;
+
+	// найти сегмент, на котором лежит target
+	var i = 0;
+	while (i < segLen.length && cum[i + 1] < target) i++;
+
+	// интерполяция внутри сегмента
+	var segStart = cum[i], segDist = segLen[i];
+	var k = (segDist === 0) ? 0 : (target - segStart) / segDist;
+
+	var x = verts[i].x + (verts[i + 1].x - verts[i].x) * k;
+	var y = verts[i].y + (verts[i + 1].y - verts[i].y) * k;
+
+	return [x, y];
+}
+
+function adjustWordsPosition() {
+	$('#words').css("position", "absolute");
+	$('#words').css("top", $("#garden").position().top + 195);
+	$('#words').css("left", $("#garden").position().left + 70);
+}
+
+function adjustCodePosition() {
+	$('#code').css("margin-top", ($("#garden").height() - $("#code").height()) / 2);
+}
+
+
+function showLoveU() {
+	$('#bday').fadeIn(3000);
+}
+function startStarAnimation() {
+	var interval = 60; // 50–70 норм
+	var angle = 0;
+	var placed = [];
+
+	var timer = setInterval(function () {
+		var bloom = getStarPoint(angle);
+		var draw = true;
+
+		// не давать цветочкам слипаться
+		for (var i = 0; i < placed.length; i++) {
+			var p = placed[i];
+			var dx = p[0] - bloom[0], dy = p[1] - bloom[1];
+			if (Math.sqrt(dx*dx + dy*dy) < Garden.options.bloomRadius.max * 1.3) {
+				draw = false; break;
+			}
+		}
+
+		if (draw) {
+			placed.push(bloom);
+
+			var oldColor = Garden.options.color;
+			var oldBloomRadius = Garden.options.bloomRadius;
+			Garden.options.color = {
+				rmin: 235, rmax: 255,
+				gmin: 185, gmax: 215,
+				bmin: 0,  bmax: 40,
+				opacity: 0.65
+			};
+			Garden.options.bloomRadius = { min: 4, max: 6 }; // лепестки звезды компактнее
+			overlayGarden.createRandomBloom(bloom[0], bloom[1]);
+			Garden.options.bloomRadius = oldBloomRadius;
+			Garden.options.color = oldColor;
+		}
+
+		// идём равномерно по контуру
+		angle += 0.06; // шаг по пути; больше = быстрее обрисовка
+		// дойдём чуть дальше 2π, чтобы гарантировать прорисовку последней вершины
+		if (angle >= 2 * Math.PI + 0.02) {
+			clearInterval(timer);
+		}
+	}, interval);
+}

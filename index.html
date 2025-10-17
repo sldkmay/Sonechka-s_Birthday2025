@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<script src="https://kit.fontawesome.com/a14ae32021.js" crossorigin="anonymous"></script>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>This one is for my Varchhu</title>
+
+<style type="text/css">
+	@import url('https://fonts.googleapis.com/css2?family=MonteCarlo&display=swap');
+@font-face {
+	font-family: digit;
+	src: url('digital-7_mono.ttf') format("truetype");
+}
+</style>
+<link href="css/default.css" type="text/css" rel="stylesheet">
+<script type="text/javascript" src="js/jquery.js"></script>
+<script type="text/javascript" src="js/garden.js"></script>
+<script type="text/javascript" src="js/functions.js"></script>
+
+</head>
+
+<body>
+
+<div id="mainDiv">	
+	<div id="content">
+		<canvas id="overlay"></canvas>
+		<div id="code">
+			<span class="comments">/**</span><br />
+			<span class="space"/><span class="comments">*18.10.2025 Sonechka's Birthday</span><br />
+			<span class="space"/><span class="comments">*/</span><br />
+			 Сонечка!<br />
+			Ты невероятная!!!<br />
+			<span class="comments">// Красивая, миленькая, умная, добрая </span><br />
+			Ты умеешь делать мир вокруг теплее<br />
+			и вдохновляешь быть лучше.<br />
+			Я искренне ценю всё, что в тебе есть<br />
+			Ты самая лучшая девочка на всем свете!<br />
+			<br />
+			Мне очень повезло, что ты есть в моей жизни.<br />
+			И из всех возможных вселенных:<br />
+			Я бы не смог жить без тебя.<br />
+			<br />
+			Тыкни на сердечко ниже =)<br />
+			<br>
+			<span id="heartspan">
+			<a href="#" id="heartLink"><i class="fas fa-heart" id="icon"></i></a>
+			</span>
+		</div>
+		<div id="loveHeart">
+			<canvas id="garden"></canvas>
+			<div id="words">
+				<div id="messages">
+					<div id="latinPhrase">Sicut luna noctu lucet, ita tu cor meum illuminas.</div>
+				</div>
+				<div id="bday">
+					С ДНЁМ РОЖДЕНИЯ!<br/>
+					<div class="signature">- Сашенька</div>
+				</div>
+			</div>
+		</div>
+		<!-- GIF Modal -->
+		<div id="gifModal" aria-hidden="true">
+			<div class="gif-container">
+				<img id="gifImage" src="cat-jump.gif" alt="Cat jump" />
+				<button id="gifClose" title="Close">×</button>
+			</div>
+		</div>
+		<audio id="meowAudio" src="meow.mp3" preload="auto"></audio>
+	</div>
+</div>
+
+<script type="text/javascript">
+var offsetX = $("#loveHeart").width() / 2;
+var offsetY = $("#loveHeart").height() / 2 - 55;
+
+if (!document.createElement('canvas').getContext) {
+	var msg = document.createElement("div");
+	msg.id = "errorMsg";
+	msg.innerHTML = "Your browser doesn't support HTML5!<br/>Recommend use Chrome 14+/IE 9+/Firefox 7+/Safari 4+"; 
+	document.body.appendChild(msg);
+	$("#code").css("display", "none")
+	$("#copyright").css("position", "absolute");
+	$("#copyright").css("bottom", "10px");
+	document.execCommand("stop");
+} else {
+	setTimeout(function () {
+    startHeartAnimation();
+    startStarAnimation();
+}, 5000);
+
+	adjustCodePosition();
+	$("#code").typewriter();
+}
+</script>
+</body>
+</html>
