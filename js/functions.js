@@ -188,20 +188,23 @@ function getStarPoint(angle) {
 	// --- настройки фигуры (подогнано под размер сердца) ---
 	var SPIKES = 5;
 	var STAR_ROTATE_DEG = 12; // угол поворота звезды (в градусах)
-	// Размер пропорционален канвасу, чтобы не искажалось
-	var BASE = overlayCanvas ? Math.min(overlayCanvas.width, overlayCanvas.height) : 600;
+	// Размер пропорционален канвасу, чтобы не искажалось (используем CSS-пиксели)
+	var cssW = overlayCanvas ? overlayCanvas.clientWidth : ($('#overlay').length ? $('#overlay').width() : 600);
+	var cssH = overlayCanvas ? overlayCanvas.clientHeight : ($('#overlay').length ? $('#overlay').height() : 600);
+	var BASE = Math.min(cssW, cssH) || 600;
 	// увеличить звезду
 	var OUTER_R = Math.round(BASE * 0.2);
 	var INNER_R = Math.round(OUTER_R * 0.35);
-	var STAR_SHIFT_X = 100;   // правее
-	var STAR_SHIFT_Y = 245;    // выше
+	// Сдвиги относительно BASE (были 100 и 245 при BASE=600)
+	var STAR_SHIFT_X = Math.round(BASE * (100 / 600));   // правее
+	var STAR_SHIFT_Y = Math.round(BASE * (245 / 600));   // выше
 
 	// --- ленивый кеш: вершины и длины считаем один раз ---
 	var ROTATE = STAR_ROTATE_DEG * Math.PI / 180;
 	if (!getStarPoint._cache || getStarPoint._cache.rotate !== ROTATE || getStarPoint._cache.outerR !== OUTER_R || getStarPoint._cache.innerR !== INNER_R || getStarPoint._cache.shiftX !== STAR_SHIFT_X || getStarPoint._cache.shiftY !== STAR_SHIFT_Y) {
-		// центр звезды: от центра overlayCanvas с тем же вертикальным смещением, что у сердца
-		var cx = (overlayCanvas ? overlayCanvas.width / 2 : offsetX) + STAR_SHIFT_X;
-		var cy = (overlayCanvas ? (overlayCanvas.height / 2 - 55) : offsetY) + STAR_SHIFT_Y;
+		// центр звезды: от центра overlayCanvas в CSS-пикселях, с тем же вертикальным смещением, что у сердца
+		var cx = (overlayCanvas ? cssW / 2 : offsetX) + STAR_SHIFT_X;
+		var cy = (overlayCanvas ? (cssH / 2 - 55) : offsetY) + STAR_SHIFT_Y;
 
 		// набираем массив вершин по окружности, начиная сверху
 		var verts = [];
