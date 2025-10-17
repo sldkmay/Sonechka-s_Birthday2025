@@ -115,7 +115,24 @@ $(window).resize(function() {
     var newWidth = $(window).width();
     var newHeight = $(window).height();
     if (newWidth != clientWidth && newHeight != clientHeight) {
-        location.replace(location);
+        // Обновляем размеры
+        clientWidth = newWidth;
+        clientHeight = newHeight;
+        
+        // Пересчитываем позиции элементов
+        adjustCodePosition();
+        adjustWordsPosition();
+        
+        // Очищаем кеш звезды для пересчета
+        if (getStarPoint._cache) {
+            getStarPoint._cache = null;
+        }
+        
+        // Перерисовываем канвасы
+        if (gardenCtx && overlayCtx) {
+            gardenCtx.clearRect(0, 0, gardenCanvas.width, gardenCanvas.height);
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
     }
 });
 
@@ -184,20 +201,36 @@ function showMessages() {
 	});
 }
 function getStarPoint(angle) {
-	// === Правильная звезда: равномерно по контуру ломаной ===
-	// --- настройки фигуры (подогнано под размер сердца) ---
+	// === Адаптивная звезда: масштабируется под размер экрана ===
 	var SPIKES = 5;
 	var STAR_ROTATE_DEG = 12; // угол поворота звезды (в градусах)
-	// Размер пропорционален канвасу, чтобы не искажалось (используем CSS-пиксели)
+	
+	// Получаем размеры экрана и канваса
+	var screenWidth = $(window).width();
+	var screenHeight = $(window).height();
 	var cssW = overlayCanvas ? overlayCanvas.clientWidth : ($('#overlay').length ? $('#overlay').width() : 600);
 	var cssH = overlayCanvas ? overlayCanvas.clientHeight : ($('#overlay').length ? $('#overlay').height() : 600);
-	var BASE = Math.min(cssW, cssH) || 600;
-	// увеличить звезду
-	var OUTER_R = Math.round(BASE * 0.2);
-	var INNER_R = Math.round(OUTER_R * 0.35);
-	// Сдвиги относительно BASE (были 100 и 245 при BASE=600)
-	var STAR_SHIFT_X = Math.round(BASE * (100 / 600));   // правее
-	var STAR_SHIFT_Y = Math.round(BASE * (245 / 600));   // выше
+	
+	// Базовый размер для масштабирования (ваш текущий экран 1366x768)
+	var baseScreenWidth = 1366;
+	var baseScreenHeight = 768;
+	
+	// Коэффициент масштабирования относительно вашего экрана
+	var scaleX = screenWidth / baseScreenWidth;
+	var scaleY = screenHeight / baseScreenHeight;
+	var scale = Math.min(scaleX, scaleY, 1); // не увеличиваем больше оригинала
+	
+	// Базовые размеры звезды (как на вашем экране)
+	var baseOuterR = 120; // базовый внешний радиус
+	var baseInnerR = 42;  // базовый внутренний радиус
+	var baseShiftX = 100; // базовый сдвиг по X
+	var baseShiftY = 245; // базовый сдвиг по Y
+	
+	// Применяем масштабирование
+	var OUTER_R = Math.round(baseOuterR * scale);
+	var INNER_R = Math.round(baseInnerR * scale);
+	var STAR_SHIFT_X = Math.round(baseShiftX * scale);
+	var STAR_SHIFT_Y = Math.round(baseShiftY * scale);
 
 	// --- ленивый кеш: вершины и длины считаем один раз ---
 	var ROTATE = STAR_ROTATE_DEG * Math.PI / 180;
@@ -255,8 +288,22 @@ function getStarPoint(angle) {
 
 function adjustWordsPosition() {
 	$('#words').css("position", "absolute");
-	$('#words').css("top", $("#garden").position().top + 195);
-	$('#words').css("left", $("#garden").position().left + 70);
+	
+	// Адаптивные позиции в зависимости от размера экрана
+	var screenWidth = $(window).width();
+	var screenHeight = $(window).height();
+	
+	// Базовые позиции для экрана 1366x768
+	var baseTop = 195;
+	var baseLeft = 70;
+	
+	// Масштабируем позиции
+	var scale = Math.min(screenWidth / 1366, screenHeight / 768, 1);
+	var topOffset = Math.round(baseTop * scale);
+	var leftOffset = Math.round(baseLeft * scale);
+	
+	$('#words').css("top", $("#garden").position().top + topOffset);
+	$('#words').css("left", $("#garden").position().left + leftOffset);
 }
 
 function adjustCodePosition() {
